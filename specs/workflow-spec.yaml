@@ -1,0 +1,14 @@
+name: ticket-triage-workflow
+description: Classify and route incoming support tickets.
+triggers:
+  - ticket.created
+steps:
+  - name: Classify Ticket
+    type: classify
+  - name: Route Ticket
+    type: route
+  - name: Notify Owner
+    type: notify
+integrations:
+  - Dataverse
+  - Microsoft Teams

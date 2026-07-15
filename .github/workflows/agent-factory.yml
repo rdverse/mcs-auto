@@ -1,0 +1,113 @@
+name: agent-factory
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "specs/**"
+      - "scripts/**"
+      - "templates/**"
+      - ".github/workflows/agent-factory.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Validate specs
+        run: |
+          python scripts/validate_specs.py \
+            --agent-spec specs/agent-spec.yaml \
+            --workflow-spec specs/workflow-spec.yaml
+      - name: Generate artifacts
+        run: |
+          python scripts/generate_assets.py \
+            --agent-spec specs/agent-spec.yaml \
+            --workflow-spec specs/workflow-spec.yaml \
+            --output-dir generated
+      - name: Upload generated artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-assets
+          path: generated/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Generate artifacts
+        run: |
+          python scripts/generate_assets.py \
+            --agent-spec specs/agent-spec.yaml \
+            --workflow-spec specs/workflow-spec.yaml \
+            --output-dir generated
+      - name: Azure OIDC login (optional for live deployment)
+        if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy assets (dry-run fallback)
+        env:
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          COPILOT_STUDIO_ENVIRONMENT_ID: ${{ secrets.COPILOT_STUDIO_ENVIRONMENT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          if [ -n "${TENANT_ID}" ] && [ -n "${COPILOT_STUDIO_ENVIRONMENT_ID}" ] && [ -n "${AZURE_CLIENT_ID}" ] && [ -n "${AZURE_TENANT_ID}" ] && [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
+            python scripts/deploy_assets.py --generated-dir generated
+          else
+            python scripts/deploy_assets.py --generated-dir generated --dry-run
+          fi
+
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Generate artifacts
+        run: |
+          python scripts/generate_assets.py \
+            --agent-spec specs/agent-spec.yaml \
+            --workflow-spec specs/workflow-spec.yaml \
+            --output-dir generated
+      - name: Create sync status (smoke precondition)
+        run: python scripts/deploy_assets.py --generated-dir generated --dry-run
+      - name: Smoke tests
+        run: python scripts/smoke_test.py --generated-dir generated
