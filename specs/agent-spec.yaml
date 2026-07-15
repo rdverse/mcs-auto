@@ -1,0 +1,12 @@
+name: Customer Support Agent
+description: Helps support engineers investigate tickets.
+knowledge:
+  - SharePoint
+  - Dataverse
+actions:
+  - Create Ticket
+  - Escalate Ticket
+workflow:
+  - Classify Ticket
+  - Route Ticket
+  - Notify Owner
