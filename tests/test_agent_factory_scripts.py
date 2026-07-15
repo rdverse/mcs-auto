@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 
-REPO_ROOT = pathlib.Path("/home/runner/work/mcs-auto/mcs-auto")
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 class AgentFactoryScriptTests(unittest.TestCase):

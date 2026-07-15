@@ -9,6 +9,13 @@ from typing import Any, Dict
 import yaml
 
 
+def _load_json(path: pathlib.Path) -> Dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain an object at the root")
+    return data
+
+
 def _load_spec(path: pathlib.Path) -> Dict[str, Any]:
     raw = path.read_text(encoding="utf-8")
     if path.suffix.lower() == ".json":
@@ -35,19 +42,14 @@ def main() -> int:
 
     generated_at = datetime.now(timezone.utc).isoformat()
 
-    agent_definition = {
-        "schemaVersion": "1.0",
-        "generatedAt": generated_at,
-        "agent": {
-            "name": agent["name"],
-            "description": agent["description"],
-            "knowledge": agent["knowledge"],
-            "actions": agent["actions"],
-        },
-        "workflow": {
-            "steps": agent["workflow"],
-        },
-    }
+    template_path = pathlib.Path(__file__).resolve().parent.parent / "templates" / "agent-definition.template.json"
+    agent_definition = _load_json(template_path)
+    agent_definition["generatedAt"] = generated_at
+    agent_definition["agent"]["name"] = agent["name"]
+    agent_definition["agent"]["description"] = agent["description"]
+    agent_definition["agent"]["knowledge"] = agent["knowledge"]
+    agent_definition["agent"]["actions"] = agent["actions"]
+    agent_definition["workflow"]["steps"] = agent["workflow"]
     workflow_definition = {
         "schemaVersion": "1.0",
         "generatedAt": generated_at,

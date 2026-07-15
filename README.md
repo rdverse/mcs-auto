@@ -26,26 +26,26 @@ agent-factory/
 ## Quick Start
 
 ```bash
-python /home/runner/work/mcs-auto/mcs-auto/scripts/validate_specs.py \
-  --agent-spec /home/runner/work/mcs-auto/mcs-auto/specs/agent-spec.yaml \
-  --workflow-spec /home/runner/work/mcs-auto/mcs-auto/specs/workflow-spec.yaml
+python scripts/validate_specs.py \
+  --agent-spec specs/agent-spec.yaml \
+  --workflow-spec specs/workflow-spec.yaml
 
-python /home/runner/work/mcs-auto/mcs-auto/scripts/generate_assets.py \
-  --agent-spec /home/runner/work/mcs-auto/mcs-auto/specs/agent-spec.yaml \
-  --workflow-spec /home/runner/work/mcs-auto/mcs-auto/specs/workflow-spec.yaml \
-  --output-dir /home/runner/work/mcs-auto/mcs-auto/generated
+python scripts/generate_assets.py \
+  --agent-spec specs/agent-spec.yaml \
+  --workflow-spec specs/workflow-spec.yaml \
+  --output-dir generated
 ```
 
 ## Test
 
 ```bash
-python -m unittest discover -s /home/runner/work/mcs-auto/mcs-auto/tests -p "test_*.py" -v
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 ## CI/CD
 
 The end-to-end pipeline is implemented in:
-- `/home/runner/work/mcs-auto/mcs-auto/.github/workflows/agent-factory.yml`
+- `.github/workflows/agent-factory.yml`
 
 Architecture, security, MVP/future-state, and gap analysis are in:
-- `/home/runner/work/mcs-auto/mcs-auto/deployment/architecture.md`
+- `deployment/architecture.md`

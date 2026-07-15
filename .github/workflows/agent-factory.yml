@@ -10,6 +10,9 @@ on:
       - ".github/workflows/agent-factory.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -57,6 +60,12 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      TENANT_ID: ${{ secrets.TENANT_ID }}
+      COPILOT_STUDIO_ENVIRONMENT_ID: ${{ secrets.COPILOT_STUDIO_ENVIRONMENT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -71,19 +80,13 @@ jobs:
             --workflow-spec specs/workflow-spec.yaml \
             --output-dir generated
       - name: Azure OIDC login (optional for live deployment)
-        if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+        if: ${{ env.AZURE_CLIENT_ID != '' && env.AZURE_TENANT_ID != '' && env.AZURE_SUBSCRIPTION_ID != '' }}
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
       - name: Deploy assets (dry-run fallback)
-        env:
-          TENANT_ID: ${{ secrets.TENANT_ID }}
-          COPILOT_STUDIO_ENVIRONMENT_ID: ${{ secrets.COPILOT_STUDIO_ENVIRONMENT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           if [ -n "${TENANT_ID}" ] && [ -n "${COPILOT_STUDIO_ENVIRONMENT_ID}" ] && [ -n "${AZURE_CLIENT_ID}" ] && [ -n "${AZURE_TENANT_ID}" ] && [ -n "${AZURE_SUBSCRIPTION_ID}" ]; then
             python scripts/deploy_assets.py --generated-dir generated
